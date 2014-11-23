@@ -10,7 +10,9 @@ struct brewProfile
   {
    const char* name;  //description profile
    const profileStep* steps;  //pointer to array of bytes defining pressures
-  };
+   int stepCount;  
+};
+
 const profileStep p1[]={
    {20,3}, //2 bar for 3 second
    {30,1}, //3 bar for 1 seconds
@@ -47,7 +49,7 @@ const profileStep p3[]={
 };
 
 const brewProfile BREWS[3]={
-  "1oz Espresso", p1,
-  "1.5oz Espresso", p2,
-  "2oz Espresso", p3,
+  "1oz Espresso", p1, sizeof(p1) / sizeof(profileStep), 
+  "1.5oz Espresso", p2, sizeof(p2) / sizeof(profileStep),
+  "2oz Espresso", p3, sizeof(p3) / sizeof(profileStep)
 };
