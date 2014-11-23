@@ -1,5 +1,3 @@
-
-
 #include "brewProfiles.h"
 // IO PINS
 //0 Serial Rx
@@ -20,7 +18,7 @@ const int boilerTempProbe = A0;
 // 15/A1 
 // 16/A2
 // 17/A3
-const int pPin = A4;
+// 18/A4
 const int pressurePot = A5;
 
 //Working Parameters
@@ -48,7 +46,7 @@ void setup() {
   Serial.begin(9600);
   showMenuItem();
   //calculate size of menu based on how many brewProfiles there are.
-  maxMenuitem=1 + sizeof(BREWS) / sizeof(brewProfile);
+  maxMenuitem=2 + sizeof(BREWS) / sizeof(brewProfile);
 }
 
 void loop()
@@ -100,11 +98,11 @@ void showMenuItem()
 switch( menuitem )
   {
     case 0:
-    Serial.println( "Ready" );
+    Serial.print( "Ready" );
     break;
    case 1:
-     Serial.println( "Manual Mode" );
-     break;
+      Serial.println( "Manual Mode" );
+      break;
 
    default:
       Serial.println( BREWS[menuitem-2].name );
@@ -116,7 +114,7 @@ void autoBrew(int brewNo)
 { 
 int n;
 activeBrew = &BREWS[brewNo];
-int stepCount = sizeof(activeBrew->steps) / sizeof(profileStep);
+int stepCount = activeBrew->stepCount;
 
 Serial.print("Dispensing ");
 Serial.println(activeBrew -> name );
@@ -141,3 +139,4 @@ while(digitalRead(okPin)==LOW)
 Serial.println("");
 showMenuItem(); 
 }
+
