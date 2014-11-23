@@ -14,38 +14,38 @@ struct brewProfile
 };
 
 const profileStep p1[]={
-   {20,3}, //2 bar for 3 second
-   {30,1}, //3 bar for 1 seconds
-   {00,1}, //0 bar for 1 seconds
-   {20,.5}, //2 bar for .5 seconds
-   {40,.5}, //4 bar for .5 seconds
-   {60,.5}, //6 bar for .5 seconds
-   {80,2.5}, //8 bar for 2.5 seconds
-   {85,11}, //8.5 bar for 11 seconds
+   {20,30}, //2 bar for 3 second
+   {30,10}, //3 bar for 1 seconds
+   {00,10}, //0 bar for 1 seconds
+   {20,5}, //2 bar for .5 seconds
+   {40,5}, //4 bar for .5 seconds
+   {60,5}, //6 bar for .5 seconds
+   {80,25}, //8 bar for 2.5 seconds
+   {85,110}, //8.5 bar for 11 seconds
 };
 
 //This creates another array of profile steps called p2
 const profileStep p2[]={
-   {20,3}, //2 bar for 3 second
-   {30,1}, //3 bar for 1 seconds
-   {00,1}, //0 bar for 1 seconds
-   {20,.5}, //2 bar for .5 seconds
-   {40,.5}, //4 bar for .5 seconds
-   {60,.5}, //6 bar for .5 seconds
-   {80,2.5}, //8 bar for 2.5 seconds
-   {85,16}, //8.5 bar for 16 seconds
+   {20,30}, //2 bar for 3 second
+   {30,10}, //3 bar for 1 seconds
+   {00,10}, //0 bar for 1 seconds
+   {20,5}, //2 bar for .5 seconds
+   {40,5}, //4 bar for .5 seconds
+   {60,5}, //6 bar for .5 seconds
+   {80,25}, //8 bar for 2.5 seconds
+   {85,160}, //8.5 bar for 16 seconds
 };
 
 //This creates another array of profile steps called p3
 const profileStep p3[]={
-   {20,3}, //2 bar for 3 second
-   {30,1}, //3 bar for 1 seconds
-   {00,1}, //0 bar for 1 seconds
-   {20,.5}, //2 bar for .5 seconds
-   {40,.5}, //4 bar for .5 seconds
-   {60,.5}, //6 bar for .5 seconds
-   {80,2.5}, //8 bar for 2.5 seconds
-   {85,21}, //8.5 bar for 21 seconds
+   {20,30}, //2 bar for 3 second
+   {30,10}, //3 bar for 1 seconds
+   {00,10}, //0 bar for 1 seconds
+   {20,5}, //2 bar for .5 seconds
+   {40,5}, //4 bar for .5 seconds
+   {60,5}, //6 bar for .5 seconds
+   {80,25}, //8 bar for 2.5 seconds
+   {85,210}, //8.5 bar for 21 seconds
 };
 
 const brewProfile BREWS[3]={
