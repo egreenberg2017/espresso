@@ -1,0 +1,143 @@
+
+
+#include "brewProfiles.h"
+// IO PINS
+//0 Serial Rx
+//1 Serial TX
+const int buttonPin = 2;   
+const int okPin = 3;
+const int inletRelay = 4;
+const int heaterRelay = 5;
+const int PRvalve = 6; //Pressure relief
+//7 spare Relay
+const int floatSwitch = 8;  
+const int pumpPWM = 9;  
+//10 spare
+//11 spare
+//12 spare
+//13 onboard LED but spare
+const int boilerTempProbe = A0;
+// 15/A1 
+// 16/A2
+// 17/A3
+const int pPin = A4;
+const int pressurePot = A5;
+
+//Working Parameters
+byte maxMenuitem; //will be worked out in setup
+const int boilerTempMin=198;
+const int boilerTempMax=202;
+
+// Store last time buttons were down
+unsigned long lastButtonPress = 0;    
+unsigned long lastOKPress=0;
+
+int menuitem=0;
+
+//Vars used to follow during brew
+// BREWS is defined in brewProfiles.h
+const brewProfile* activeBrew=NULL;
+  // 255 no brewing going on
+  // 254 Currently brewing in muanual mode
+  // 0-253 Currently using auto using brewProfile 
+
+
+void setup() {
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(okPin, INPUT_PULLUP);
+  Serial.begin(9600);
+  showMenuItem();
+  //calculate size of menu based on how many brewProfiles there are.
+  maxMenuitem=1 + sizeof(BREWS) / sizeof(brewProfile);
+}
+
+void loop()
+{
+unsigned long t=millis();
+bool buttonPress=digitalRead(buttonPin);
+bool okPress=digitalRead(okPin);
+
+//ignore button press if it's within .4 of a second since the last one
+if ( (buttonPress==LOW) && ( (t-lastButtonPress) >400 ) )
+    {
+      menuitem++;
+      if(menuitem > maxMenuitem)
+        menuitem=1;
+      showMenuItem();
+      lastButtonPress=t;  
+    }
+
+if( (okPress==LOW) && ( ( t-lastOKPress) > 400 ) )
+  {lastOKPress=t;
+  switch(menuitem)
+    {case 0:
+      menuitem=1;
+      break;
+    
+     case 1:
+       manualBrew();
+       break;   
+
+     default:
+       autoBrew(menuitem-2);
+       break;
+
+    }//end of switch
+  }// end of if OK pressed
+  
+//if neither key has been pressed for 10 seconds go back to "ready"
+if ( ((t-lastOKPress)>10000) && ( t-lastButtonPress ) > 10000 && (menuitem != 0))   
+  {
+  menuitem=0;
+  showMenuItem();
+  }
+  
+}//end of loop
+
+//This item just tells the user where they are in the menu system
+void showMenuItem()
+{
+switch( menuitem )
+  {
+    case 0:
+    Serial.println( "Ready" );
+    break;
+   case 1:
+     Serial.println( "Manual Mode" );
+     break;
+
+   default:
+      Serial.println( BREWS[menuitem-2].name );
+  } 
+}
+
+
+void autoBrew(int brewNo)
+{ 
+int n;
+activeBrew = &BREWS[brewNo];
+int stepCount = sizeof(activeBrew->steps) / sizeof(profileStep);
+
+Serial.print("Dispensing ");
+Serial.println(activeBrew -> name );
+for(n=0;n< stepCount ;n++)
+ {Serial.println("Pressure ");
+  Serial.println(activeBrew ->steps[n].pressure,DEC);
+  delay(activeBrew->steps[n].duration * 1000);
+ }
+activeBrew=NULL;
+Serial.println("Enjoy!");
+showMenuItem();
+}
+
+void manualBrew()
+{
+Serial.print("Dispensing");
+while(digitalRead(okPin)==LOW)
+  {
+   Serial.print(".");
+   delay(200);
+  }
+Serial.println("");
+showMenuItem(); 
+}
