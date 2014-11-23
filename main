@@ -121,7 +121,7 @@ Serial.println(activeBrew -> name );
 for(n=0;n< stepCount ;n++)
  {Serial.println("Pressure ");
   Serial.println(activeBrew ->steps[n].pressure,DEC);
-  delay(activeBrew->steps[n].duration * 1000);
+  delay(activeBrew->steps[n].duration * 100);
  }
 activeBrew=NULL;
 Serial.println("Enjoy!");
@@ -139,4 +139,3 @@ while(digitalRead(okPin)==LOW)
 Serial.println("");
 showMenuItem(); 
 }
-
