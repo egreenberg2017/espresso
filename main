@@ -46,7 +46,7 @@ void setup() {
   Serial.begin(9600);
   showMenuItem();
   //calculate size of menu based on how many brewProfiles there are.
-  maxMenuitem=2 + sizeof(BREWS) / sizeof(brewProfile);
+  maxMenuitem=1 + sizeof(BREWS) / sizeof(brewProfile);
 }
 
 void loop()
