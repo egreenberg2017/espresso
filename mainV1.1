@@ -71,6 +71,7 @@ bool groupPress=digitalRead(groupButton);
 //ignore button press if it's within .4 of a second since the last one
 if ( (buttonPress==LOW) && ( (t-lastButtonPress) >400 ) )
     {
+      lcd.backlight(); //wakes up lcd from sleep if it applies
       menuitem++;
       if(menuitem > maxMenuitem)
         menuitem=1;
@@ -98,7 +99,9 @@ if ( ((t-lastGroupPress)>10000) && ( t-lastButtonPress ) > 10000 && (menuitem !=
   menuitem=0;
   showMenuItem();
   }
-  
+if ( ((t-lastGroupPress)>120000) && ( t-lastButtonPress ) > 120000) {
+  lcd.noBacklight; //sleep mode
+  }
 }//end of loop
 
 //This item just tells the user where they are in the menu system
