@@ -236,9 +236,9 @@ void boilerPid () {
   temp = temp * 1.8; //converting to F
   temp = temp + 32; //converting to F
   if (boilerTempMin > temp) {
-    analogWrite(heaterRelay, 255);
+    digitalWrite(heaterRelay, HIGH);
   }
   if (boilerTempMax <= temp) {
-    analogWrite(heaterRelay, 0);
+    digitalWrite(heaterRelay, LOW);
   }
 }
