@@ -37,7 +37,9 @@ const int boilerTempMax=202;
 
 // Store last time buttons were down
 unsigned long lastButtonPress = 0;    
-unsigned long lastGroupPress=0;
+unsigned long lastGroupPress = 0;
+
+unsigned int pressure = 0;
 
 int menuitem=0;
 
@@ -71,8 +73,8 @@ bool groupPress=digitalRead(groupButton);
 //ignore button press if it's within .4 of a second since the last one
 if ( (buttonPress==LOW) && ( (t-lastButtonPress) >400 ) )
     {
-      lcd.backlight(); //wakes up lcd from sleep if it applies
       menuitem++;
+      lcd.backlight();
       if(menuitem > maxMenuitem)
         menuitem=1;
       showMenuItem();
@@ -81,6 +83,7 @@ if ( (buttonPress==LOW) && ( (t-lastButtonPress) >400 ) )
 
 if( (groupPress==LOW) && ( ( menuitem > 0) ) )
   {lastGroupPress=t;
+  
   switch(menuitem)
     {case 1:
        manualBrew();
@@ -99,9 +102,14 @@ if ( ((t-lastGroupPress)>10000) && ( t-lastButtonPress ) > 10000 && (menuitem !=
   menuitem=0;
   showMenuItem();
   }
-if ( ((t-lastGroupPress)>120000) && ( t-lastButtonPress ) > 120000) {
-  lcd.noBacklight; //sleep mode
-  }
+if ( ((t-lastGroupPress)>120000) && ( t-lastButtonPress ) > 120000 ) {
+ lcd.noBacklight();
+} 
+
+int rawPressure = analogRead(pressurePin);
+  int pressure = map(rawPressure, 51,920, 0, 120);
+  
+
 }//end of loop
 
 //This item just tells the user where they are in the menu system
@@ -120,14 +128,20 @@ switch( menuitem )
       //lcdClearSet;
       lcd.clear();
       lcd.setCursor(0,0);
+      //lcd.print(">");
       lcd.print("Manual Mode");
+      //lcd.setCursor(0,1);
+      //lcd.print("1 oz");
       break;
 
    default:
       Serial.println( BREWS[menuitem-2].name );
       lcd.clear();
       lcd.setCursor(0,0);
+      //lcd.print(">");
       lcd.print(BREWS[menuitem-2].name);
+      //lcd.setCursor(0,1);
+      //lcd.print(BREWS[menuitem-1].name);
   } 
 }
 
@@ -156,13 +170,18 @@ for(n=0; n<stepCount ;n++)
   Serial.println(activeBrew ->steps[n].pressure,DEC);
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("T Pressure ");
-  lcd.print(activeBrew ->steps[n].pressure,DEC);
-  lcd.print("bar");
+  lcd.print("TPres CPres Temp");
   lcd.setCursor(0,1);
-  lcd.print("Pressure ");
-  //lcd.print the current pressure from sensor
+  lcd.print(activeBrew ->steps[n].pressure,DEC);
+  lcd.setCursor(2,1);
   lcd.print("bar");
+  lcd.setCursor(6,1);
+  lcd.print(pressure);
+  lcd.setCursor(8,1);
+  lcd.print("bar");
+  lcd.setCursor(12,1);
+  lcd.print("N/A"); //need to get temperature
+  
   
   //This is crude.
   //we should be looking up the value to send
@@ -209,6 +228,9 @@ while(digitalRead(groupButton)==LOW)
   int motorValue=map (potValue,0,1023, 0,255); 
    //This is very crude  (see autobrew) 
   analogWrite(pumpPWM, motorValue);
+  lcd.setCursor(0,1);
+  lcd.print(pressure);
+  lcd.print("bar");
   lcd.setCursor(7,1);
   lcd.print("Pump=");
   lcd.setCursor(12,1);
@@ -255,3 +277,4 @@ for(int n=0; n<64; n++)
   sum += analogRead(pin);
 return sum/64;
 }
+
