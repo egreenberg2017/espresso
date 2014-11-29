@@ -234,9 +234,9 @@ void lcdClearSet() {
   lcd.setCursor(0,0);
 }
 
-void boilerPid () { //this needs some work for sure, like setting a mills() function to get the temp
-  float temp = 0;   //also location, where to put "boilerPid", just under "loop"?
-  temp = analogRead(boilerTempProbe);
+void boilerPid () {
+  float temp = 0;
+  temp = analogAvg(boilerTempProbe);
   temp = temp * 0.48828125;
   temp = temp * 1.8; //converting to F
   temp = temp + 32; //converting to F
@@ -246,4 +246,12 @@ void boilerPid () { //this needs some work for sure, like setting a mills() func
   if (boilerTempMax <= temp) {
     digitalWrite(heaterRelay, LOW);
   }
+}
+
+unsigned int analogAvg(int pin)
+{//since analogRed returns 10 bits, we can fit 64 readings within an unsigned int
+unsigned int sum=0;
+for(int n=0; n<64; n++)
+  sum += analogRead(pin);
+return sum/64;
 }
