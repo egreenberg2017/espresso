@@ -229,8 +229,8 @@ void lcdClearSet() {
   lcd.setCursor(0,0);
 }
 
-void boilerPid () {
-  float temp = 0;
+void boilerPid () { //this needs some work for sure, like setting a mills() function to get the temp
+  float temp = 0;   //also location, where to put "boilerPid", just under "loop"?
   temp = analogRead(boilerTempProbe);
   temp = temp * 0.48828125;
   temp = temp * 1.8; //converting to F
