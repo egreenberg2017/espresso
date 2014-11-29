@@ -209,6 +209,8 @@ while(digitalRead(groupButton)==LOW)
   int motorValue=map (potValue,0,1023, 0,255); 
    //This is very crude  (see autobrew) 
   analogWrite(pumpPWM, motorValue);
+  lcd.setCursor(7,1);
+  lcd.print("Pump=");
   lcd.setCursor(12,1);
   int pumpPercent=map (potValue,0,1023,0,100);
   lcd.print(pumpPercent);
