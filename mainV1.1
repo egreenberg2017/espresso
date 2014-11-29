@@ -55,7 +55,10 @@ void setup() {
   pinMode(buttonPin, INPUT_PULLUP);
   pinMode(okPin, INPUT_PULLUP);
   pinMode(groupButton, INPUT_PULLUP);
-
+  pinMode(groupHeadValve, OUTPUT);
+  pinMode(inletRelay, OUTPUT);
+  pinMode(heaterRelay, OUTPUT);
+  
   Serial.begin(9600);
   lcd.begin(16,2);
   lcd.backlight();
