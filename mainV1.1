@@ -1,0 +1,244 @@
+//FILE VERSION 1.0 
+//INCLUDES PUMP OUTPUT MAPPED FROM PROFILE (IN AUTO MODE)
+//                     MAPPED FROM POT (in manual mode)
+//THIS DOES NOT INCLUDE ANY MONITORING OF ACTUAL PRESSURE
+
+#include "brewProfiles.h"
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
+
+// IO PINS
+//0 Serial Rx
+//1 Serial TX
+const int buttonPin = 2;   
+const int okPin = 3;
+const int inletRelay = 4;
+const int heaterRelay = 5;
+const int groupHeadValve = 6; //Pressure relief
+//7 spare Relay
+const int lowSwitch = 8;  //low level switch, fill
+const int pumpPWM = 9;  
+const int highSwitch = 10; //high level switch, stop filling
+//11 spare
+const int groupButton = 12;
+//13 onboard LED but otherwise spare
+const int boilerTempProbe = A0;
+const int pressurePot = A1; 
+const int pressurePin = A2;
+// 17/A3
+// LCD 
+// LCD
+
+//Working Parameters
+byte maxMenuitem; //will be worked out in setup
+const int boilerTempMin=198;
+const int boilerTempMax=202;
+
+// Store last time buttons were down
+unsigned long lastButtonPress = 0;    
+unsigned long lastGroupPress=0;
+
+int menuitem=0;
+
+//Vars used to follow during brew
+// BREWS is defined in brewProfiles.h
+const brewProfile* activeBrew=NULL;
+  // 255 no brewing going on
+  // 254 Currently brewing in muanual mode
+  // 0-253 Currently using auto using brewProfile 
+
+
+void setup() {
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(okPin, INPUT_PULLUP);
+  pinMode(groupButton, INPUT_PULLUP);
+
+  Serial.begin(9600);
+  lcd.begin(16,2);
+  lcd.backlight();
+  showMenuItem();
+  //calculate size of menu based on how many brewProfiles there are.
+  maxMenuitem=1 + sizeof(BREWS) / sizeof(brewProfile);
+}
+
+void loop()
+{
+unsigned long t=millis();
+bool buttonPress=digitalRead(buttonPin);
+bool groupPress=digitalRead(groupButton);
+
+//ignore button press if it's within .4 of a second since the last one
+if ( (buttonPress==LOW) && ( (t-lastButtonPress) >400 ) )
+    {
+      menuitem++;
+      if(menuitem > maxMenuitem)
+        menuitem=1;
+      showMenuItem();
+      lastButtonPress=t;  
+    }
+
+if( (groupPress==LOW) && ( ( menuitem > 0) ) )
+  {lastGroupPress=t;
+  switch(menuitem)
+    {case 1:
+       manualBrew();
+       break;   
+
+     default:
+       autoBrew(menuitem-2);
+       break;
+
+    }//end of switch
+  }// end of if OK pressed
+  
+//if neither key has been pressed for 10 seconds go back to "ready"
+if ( ((t-lastGroupPress)>10000) && ( t-lastButtonPress ) > 10000 && (menuitem != 0))   
+  {
+  menuitem=0;
+  showMenuItem();
+  }
+  
+}//end of loop
+
+//This item just tells the user where they are in the menu system
+void showMenuItem()
+{
+switch( menuitem )
+  {
+    case 0:
+    Serial.println( "Ready" );
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Ready");
+    break;
+   case 1:
+      Serial.println( "Manual Mode" );
+      //lcdClearSet;
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Manual Mode");
+      break;
+
+   default:
+      Serial.println( BREWS[menuitem-2].name );
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print(BREWS[menuitem-2].name);
+  } 
+}
+
+
+void autoBrew(int brewNo)
+{ 
+int n;
+activeBrew = &BREWS[brewNo];
+int stepCount = activeBrew->stepCount;
+//make Sure grouphead valve is closed
+//RELAY IS ACTIVE LOW BUT VALVE IS WIRED
+//TO NC SWITCH
+digitalWrite(groupHeadValve, HIGH);
+Serial.print("Dispensing ");
+Serial.println(activeBrew -> name );
+lcd.clear();
+lcd.setCursor(0,0);
+lcd.print("Dispensing ");
+lcd.print(activeBrew -> name );
+for(n=0; n<stepCount ;n++)
+ {
+  //exit loop if groupButton is released 
+  if (digitalRead(groupButton)==HIGH)
+    break;   
+   Serial.println("Pressure ");
+  Serial.println(activeBrew ->steps[n].pressure,DEC);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("T Pressure ");
+  lcd.print(activeBrew ->steps[n].pressure,DEC);
+  lcd.print("bar");
+  lcd.setCursor(0,1);
+  lcd.print("Pressure ");
+  //lcd.print the current pressure from sensor
+  lcd.print("bar");
+  
+  //This is crude.
+  //we should be looking up the value to send
+  //ALSO there should be monitoring of the pressure
+  int motorValue = map(activeBrew -> steps[n].pressure, 0, 92, 0, 255);
+  analogWrite(pumpPWM, motorValue);
+  delay(activeBrew->steps[n].duration * 100);
+ }
+ 
+activeBrew=NULL;
+Serial.println("Enjoy!");
+lcd.clear();
+lcd.setCursor(0,0);
+lcd.print("Enjoy!");
+analogWrite(pumpPWM,0);
+//ensure groupButton is released at least a second
+while(digitalRead(groupButton)==LOW)
+  delay(1000);
+
+showMenuItem();
+lastGroupPress=millis();
+//make Sure grouphead valve is closed
+digitalWrite(groupHeadValve, LOW);
+}
+
+void manualBrew()
+{
+//make Sure grouphead valve is closed
+//RELAY IS ACTIVE LOW BUT VALVE IS WIRED
+//TO NC SWITCH
+digitalWrite(groupHeadValve, HIGH);
+
+Serial.print("Dispensing");
+lcd.clear();
+lcd.setCursor(0,0);
+lcd.print("Dispensing");
+//lcd.print timer, right corner
+lcd.setCursor(0,1);
+//lcd.print current pressure
+
+while(digitalRead(groupButton)==LOW)
+  {
+  int potValue=analogRead(pressurePot);
+  int motorValue=map (potValue,0,1023, 0,255); 
+   //This is very crude  (see autobrew) 
+  analogWrite(pumpPWM, motorValue);
+  lcd.setCursor(12,1);
+  int pumpPercent=map (potValue,0,1023,0,100);
+  lcd.print(pumpPercent);
+  lcd.setCursor(15,1);
+  lcd.print("%");
+  Serial.print(".");
+   delay(200);
+  }
+
+Serial.println("");
+showMenuItem(); 
+analogWrite(pumpPWM, 0);
+delay(100);//allow debounce of groupButton
+lastGroupPress=millis();
+//make Sure grouphead valve is open again
+digitalWrite(groupHeadValve, LOW);
+}
+
+void lcdClearSet() {
+  lcd.clear();
+  lcd.setCursor(0,0);
+}
+
+void boilerPid () {
+  float temp = 0;
+  temp = analogRead(boilerTempProbe);
+  temp = temp * 0.48828125;
+  temp = temp * 1.8; //converting to F
+  temp = temp + 32; //converting to F
+  if (boilerTempMin > temp) {
+    analogWrite(heaterRelay, 255);
+  }
+  if (boilerTempMax <= temp) {
+    analogWrite(heaterRelay, 0);
+  }
+}
