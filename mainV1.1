@@ -1,4 +1,4 @@
-//FILE VERSION 1.0 
+//FILE VERSION 1.1
 //INCLUDES PUMP OUTPUT MAPPED FROM PROFILE (IN AUTO MODE)
 //                     MAPPED FROM POT (in manual mode)
 //THIS DOES NOT INCLUDE ANY MONITORING OF ACTUAL PRESSURE
@@ -39,7 +39,7 @@ const int boilerTempMax=202;
 unsigned long lastButtonPress = 0;    
 unsigned long lastGroupPress = 0;
 
-unsigned int pressure = 0;
+
 
 int menuitem=0;
 
@@ -112,7 +112,7 @@ if ( ((t-lastGroupPress)>120000) && ( t-lastButtonPress ) > 120000 ) {
 int rawPressure = analogRead(pressurePin);
   int pressure = map(rawPressure, 51,920, 0, 120);
   
-
+boilerPid;
 }//end of loop
 
 //This item just tells the user where they are in the menu system
@@ -168,7 +168,9 @@ for(n=0; n<stepCount ;n++)
  {
   //exit loop if groupButton is released 
   if (digitalRead(groupButton)==HIGH)
-    break;   
+    break;
+    int rawPressure = analogRead(pressurePin);
+  float pressure = map(rawPressure, 51,920, 0, 120);
    Serial.println("Pressure ");
   Serial.println(activeBrew ->steps[n].pressure,DEC);
   lcd.clear();
@@ -179,10 +181,10 @@ for(n=0; n<stepCount ;n++)
   lcd.setCursor(2,1);
   lcd.print("bar");
   lcd.setCursor(6,1);
-  lcd.print(pressure);
-  lcd.setCursor(8,1);
+  lcd.print(pressure / 10);
+  lcd.setCursor(9,1);
   lcd.print("bar");
-  lcd.setCursor(12,1);
+  lcd.setCursor(13,1);
   lcd.print("N/A"); //need to get temperature
   
   
@@ -227,17 +229,23 @@ lcd.setCursor(0,1);
 
 while(digitalRead(groupButton)==LOW)
   {
+    int rawPressure = analogRead(pressurePin);
+  float pressure = map(rawPressure, 51,920, 0, 120);
   int potValue=analogRead(pressurePot);
   int motorValue=map (potValue,0,1023, 0,255); 
    //This is very crude  (see autobrew) 
   analogWrite(pumpPWM, motorValue);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Dispensing");
   lcd.setCursor(0,1);
-  lcd.print(pressure);
+  lcd.print(pressure / 10);
+  lcd.setCursor(3,1);
   lcd.print("bar");
   lcd.setCursor(7,1);
   lcd.print("Pump=");
   lcd.setCursor(12,1);
-  int pumpPercent=map (potValue,0,1023,0,100);
+  int pumpPercent=map (motorValue,0,255,0,100);
   lcd.print(pumpPercent);
   lcd.setCursor(15,1);
   lcd.print("%");
