@@ -15,7 +15,7 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 //0 Serial Rx
 //1 Serial TX
 const int buttonPin = 2;   
-const int okPin = 3;
+//3 spare
 const int inletRelay = 4;
 const int heaterRelay = 5;
 const int groupHeadValve = 6; //Pressure relief
@@ -35,11 +35,11 @@ const int pressurePin = A2;
 
 //Working Parameters
 byte maxMenuitem; //will be worked out in setup
-float boilerTempMin= (EEPROM.read(0) - 1);
-float boilerTempMax= (EEPROM.read(0) + 1);
-float selectedTemp = 197;
+float boilerTempMin= (EEPROM.read(0) - 1); //temp at which boiler turns on
+float boilerTempMax= (EEPROM.read(0) + 1); //temp at which boiler turns off
+float selectedTemp = 197; //default selected temp
 
-float steinhart;
+float steinhart; //variable for temp (which is actually in F not C)
 
 // Store last time buttons were down
 unsigned long lastButtonPress = 0;    
