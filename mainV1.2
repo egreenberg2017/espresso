@@ -1,0 +1,376 @@
+
+//FILE VERSION 1.0 
+//INCLUDES PUMP OUTPUT MAPPED FROM PROFILE (IN AUTO MODE)
+//                     MAPPED FROM POT (in manual mode)
+//THIS DOES NOT INCLUDE ANY MONITORING OF ACTUAL PRESSURE
+
+#include "brewProfiles.h"
+#include <EEPROM.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
+
+// IO PINS
+//0 Serial Rx
+//1 Serial TX
+const int buttonPin = 2;   
+const int okPin = 3;
+const int inletRelay = 4;
+const int heaterRelay = 5;
+const int groupHeadValve = 6; //Pressure relief
+//7 spare
+const int lowSwitch = 8;  //low level switch, fill
+const int pumpPWM = 9;  
+const int highSwitch = 10; //high level switch, stop filling
+//11 spare
+const int groupButton = 12;
+//13 onboard LED but otherwise spare
+const int boilerTempProbe = A0;
+const int pressurePot = A1; 
+const int pressurePin = A2;
+// 17/A3
+// LCD 
+// LCD
+
+//Working Parameters
+byte maxMenuitem; //will be worked out in setup
+float boilerTempMin= (EEPROM.read(0) - 1);
+float boilerTempMax= (EEPROM.read(0) + 1);
+float selectedTemp = 197;
+
+
+// Store last time buttons were down
+unsigned long lastButtonPress = 0;    
+unsigned long lastGroupPress = 0;
+
+int menuitem=0;
+
+//Vars used to follow during brew
+// BREWS is defined in brewProfiles.h
+const brewProfile* activeBrew=NULL;
+  // 255 no brewing going on
+  // 254 Currently brewing in muanual mode
+  // 0-253 Currently using auto using brewProfile 
+
+
+void setup() {
+  digitalWrite(inletRelay, LOW);
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(okPin, INPUT_PULLUP);
+  pinMode(groupButton, INPUT_PULLUP);
+  pinMode(groupHeadValve, OUTPUT);
+  pinMode(inletRelay, OUTPUT);
+  pinMode(heaterRelay, OUTPUT);
+  pinMode(lowSwitch, INPUT);
+  pinMode(highSwitch, INPUT);
+  
+  Serial.begin(9600);
+  lcd.begin(16,2);
+  lcd.backlight();
+  showMenuItem();
+  //calculate size of menu based on how many brewProfiles there are.
+  maxMenuitem=2 + sizeof(BREWS) / sizeof(brewProfile);
+  analogWrite(pumpPWM, 0);
+ 
+}
+
+void loop()
+{
+  
+  
+unsigned long t=millis();
+bool buttonPress=digitalRead(buttonPin);
+bool groupPress=digitalRead(groupButton);
+
+//ignore button press if it's within .4 of a second since the last one
+if ( (buttonPress==LOW) && ( (t-lastButtonPress) >400 ) )
+    {
+      menuitem++;
+      lcd.backlight();
+      if(menuitem > maxMenuitem)
+        menuitem=1;
+      showMenuItem();
+      lastButtonPress=t;  
+    }
+
+if( (groupPress==LOW) && ( ( menuitem > 0) ) )
+  {lastGroupPress=t;
+  
+  switch(menuitem)
+    {case 1:
+       manualBrew();
+       break;
+    case 2:
+       setTemp();   
+       break;
+     default:
+       autoBrew(menuitem-3);
+       break;
+
+    }//end of switch
+  }// end of if OK pressed
+  
+//if neither key has been pressed for 10 seconds go back to "ready"
+if ( ((t-lastGroupPress)>10000) && ( t-lastButtonPress ) > 10000 && (menuitem != 0))   
+  {
+  menuitem=0;
+  showMenuItem();
+  }
+if ( ((t-lastGroupPress)>120000) && ( t-lastButtonPress ) > 120000 ) {
+ lcd.noBacklight();
+} 
+
+int rawPressure = analogRead(pressurePin);
+  int pressure = map(rawPressure, 51,920, 0, 120);
+  
+
+  
+
+}//end of loop
+
+//This item just tells the user where they are in the menu system
+void showMenuItem()
+{
+switch( menuitem )
+  {
+    case 0:
+    Serial.println( "Ready" );
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Ready");
+    lcd.setCursor(0,1);
+    lcd.print("ST: ");
+    lcd.print(EEPROM.read(0));
+    lcd.print(" CT: ");
+    lcd.print("NA");
+    break;
+   case 1:
+      Serial.println( "Manual Mode" );
+      //lcdClearSet;
+      lcd.clear();
+      lcd.setCursor(0,0);
+      //lcd.print(">");
+      lcd.print("Manual Mode");
+      //lcd.setCursor(0,1);
+      //lcd.print("1 oz");
+      break;
+  case 2:
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Set Temp");
+      break;
+   default:
+      Serial.println( BREWS[menuitem-3].name );
+      lcd.clear();
+      lcd.setCursor(0,0);
+      //lcd.print(">");
+      lcd.print(BREWS[menuitem-3].name);
+      //lcd.setCursor(0,1);
+      //lcd.print(BREWS[menuitem-1].name);
+  }
+//pid
+float temp = 0;
+  temp = analogAvg(boilerTempProbe);
+  temp = temp * 0.48828125;
+  temp = temp * 1.8; //converting to F
+  temp = temp + 32; //converting to F
+  delay(500);
+  if (boilerTempMin >= temp) {
+    digitalWrite(heaterRelay, LOW);
+  }
+  if (boilerTempMax <= temp) {
+    digitalWrite(heaterRelay, HIGH);
+  }
+  
+}
+
+
+void autoBrew(int brewNo)
+{
+int n;
+activeBrew = &BREWS[brewNo];
+int stepCount = activeBrew->stepCount;
+//make Sure grouphead valve is closed
+//RELAY IS ACTIVE LOW BUT VALVE IS WIRED
+//TO NC SWITCH
+
+digitalWrite(groupHeadValve, HIGH);
+Serial.print("Dispensing ");
+Serial.println(activeBrew -> name );
+lcd.clear();
+lcd.setCursor(0,0);
+lcd.print("Dispensing ");
+lcd.print(activeBrew -> name );
+for(n=0; n<stepCount ;n++)
+ {
+  //exit loop if groupButton is released 
+  if (digitalRead(groupButton)==HIGH)
+    break;
+    int rawPressure = analogRead(pressurePin);
+  float pressure = map(rawPressure, 51,920, 0, 120);
+   Serial.println("Pressure ");
+  Serial.println(activeBrew ->steps[n].pressure,DEC);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("TPres CPres Temp");
+  lcd.setCursor(0,1);
+  lcd.print(activeBrew ->steps[n].pressure,DEC);
+  lcd.setCursor(2,1);
+  lcd.print("bar");
+  lcd.setCursor(6,1);
+  lcd.print(pressure / 10);
+  lcd.setCursor(9,1);
+  lcd.print("bar");
+  lcd.setCursor(13,1);
+  lcd.print("N/A"); //need to get temperature
+  
+  
+  //This is crude.
+  //we should be looking up the value to send
+  //ALSO there should be monitoring of the pressure
+  int motorValue = map(activeBrew -> steps[n].pressure, 0, 92, 0, 255);
+  analogWrite(pumpPWM, motorValue);
+  delay(activeBrew->steps[n].duration * 100);
+ }
+ 
+activeBrew=NULL;
+Serial.println("Enjoy!");
+lcd.clear();
+lcd.setCursor(0,0);
+lcd.print("Enjoy!");
+analogWrite(pumpPWM,0);
+//ensure groupButton is released at least a second
+while(digitalRead(groupButton)==LOW)
+  delay(1000);
+
+showMenuItem();
+lastGroupPress=millis();
+//make Sure grouphead valve is closed
+digitalWrite(groupHeadValve, LOW);
+}
+
+
+void manualBrew()
+{
+//make Sure grouphead valve is closed
+//RELAY IS ACTIVE LOW BUT VALVE IS WIRED
+//TO NC SWITCH
+digitalWrite(groupHeadValve, HIGH);
+
+Serial.print("Dispensing");
+lcd.clear();
+lcd.setCursor(0,0);
+lcd.print("Dispensing");
+//lcd.print timer, right corner
+lcd.setCursor(0,1);
+//lcd.print current pressure
+
+while(digitalRead(groupButton)==LOW)
+  {
+    int rawPressure = analogRead(pressurePin);
+  float pressure = map(rawPressure, 51,920, 0, 120);
+  int potValue=analogRead(pressurePot);
+  int motorValue=map (potValue,0,1023,0,255);
+   //if (potValue <= 2) 
+ //{motorValue=0;
+ //}
+ 
+   
+   //This is very crude  (see autobrew) 
+  analogWrite(pumpPWM, motorValue);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Dispensing");
+  lcd.setCursor(0,1);
+  lcd.print(pressure / 10);
+  lcd.setCursor(3,1);
+  lcd.print("bar");
+  lcd.setCursor(7,1);
+  lcd.print("Pump=");
+  lcd.setCursor(12,1);
+  int pumpPercent=map (motorValue,0,255,0,100);
+  lcd.print(pumpPercent);
+  lcd.setCursor(15,1);
+  lcd.print("%");
+  Serial.print(".");
+   delay(200);
+  }
+
+Serial.println("");
+showMenuItem(); 
+analogWrite(pumpPWM, 0);
+delay(100);//allow debounce of groupButton
+lastGroupPress=millis();
+//make Sure grouphead valve is open again
+digitalWrite(groupHeadValve, LOW);
+}
+
+void lcdClearSet() {
+  lcd.clear();
+  lcd.setCursor(0,0);
+}
+
+void boilerPid () {
+  float temp = 0;
+  temp = analogAvg(boilerTempProbe);
+  temp = temp * 0.48828125;
+  temp = temp * 1.8; //converting to F
+  temp = temp + 32; //converting to F
+  delay(500);
+  if (boilerTempMin >= temp) {
+    digitalWrite(heaterRelay, LOW);
+  }
+  if (boilerTempMax <= temp) {
+    digitalWrite(heaterRelay, HIGH);
+  }
+}
+
+unsigned int analogAvg(int pin)
+{//since analogRed returns 10 bits, we can fit 64 readings within an unsigned int
+unsigned int sum=0;
+for(int n=0; n<64; n++)
+  sum += analogRead(pin);
+return sum/64;
+}
+
+void cycle () {
+  
+  while(digitalRead(groupButton) == LOW) {
+    int rawPressure = analogRead(pressurePin);
+  int pressure = map(rawPressure, 51,920, 0, 120);
+   lcd.clear();
+   lcd.setCursor(0,0);
+   lcd.print("Pressure ");
+   lcd.print(pressure / 10);
+   lcd.print(" bar");
+   digitalWrite(groupHeadValve, LOW);
+   analogWrite(pumpPWM, 170);
+  }
+  analogWrite(pumpPWM, 0);
+}
+
+void fill(){
+  if((digitalRead(lowSwitch)) == HIGH){
+    digitalWrite(inletRelay, HIGH);
+    digitalWrite(groupHeadValve, HIGH);
+  }
+  if((digitalRead(lowSwitch)) == LOW){
+    digitalWrite(inletRelay, LOW);
+    digitalWrite(groupHeadValve, LOW);
+  }
+}
+
+void setTemp(){
+if(digitalRead(groupButton) == LOW){
+  delay(50);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  int selection = analogRead(pressurePot);
+  selectedTemp = map(selection, 0, 1023, 192, 207);
+  EEPROM.write(0, selectedTemp);
+  boilerTempMin = (EEPROM.read(0) - 1);
+  boilerTempMax = (EEPROM.read(0) + 1);
+  lcd.print("PID Temp: ");
+  lcd.print(selectedTemp);
+}
+}
