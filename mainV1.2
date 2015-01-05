@@ -2,7 +2,7 @@
 //FILE VERSION 1.2 
 //INCLUDES PUMP OUTPUT MAPPED FROM PROFILE (IN AUTO MODE)
 //                     MAPPED FROM POT (in manual mode)
-//THIS DOES NOT INCLUDE ANY MONITORING OF ACTUAL PRESSURE
+
 
 #include "brewProfiles.h"
 
@@ -108,14 +108,18 @@ if( (groupPress==LOW) && ( ( menuitem > 0) ) )
   {lastGroupPress=t;
   
   switch(menuitem)
-    {case 1:
-       manualBrew();
-       break;
-    case 2:
+    {
+    case 1:
        setTemp();   
        break;
+    case 2:
+       cycle();
+       break;
+    case 3:
+       manualBrew();
+       break;
      default:
-       autoBrew(menuitem-3);
+       autoBrew(menuitem-4);
        break;
 
     }//end of switch
@@ -156,6 +160,16 @@ switch( menuitem )
     lcd.print(steinhart);
     break;
    case 1:
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Set Temp");
+      break;
+   case 2:
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Cycle");
+      break;
+   case 3:
       Serial.println( "Manual Mode" );
       //lcdClearSet;
       lcd.clear();
@@ -164,11 +178,6 @@ switch( menuitem )
       lcd.print("Manual Mode");
       //lcd.setCursor(0,1);
       //lcd.print("1 oz");
-      break;
-  case 2:
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print("Set Temp");
       break;
    default:
       Serial.println( BREWS[menuitem-3].name );
