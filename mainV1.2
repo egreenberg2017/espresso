@@ -86,8 +86,8 @@ void setup() {
 
 void loop()
 {
-boilerPid;  
-  
+boilerPid();
+fill();  
 unsigned long t=millis();
 bool buttonPress=digitalRead(buttonPin);
 bool groupPress=digitalRead(groupButton);
@@ -148,15 +148,29 @@ void showMenuItem()
 switch( menuitem )
   {
     case 0:
-    Serial.println( "Ready" );
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Ready");
-    lcd.setCursor(0,1);
-    lcd.print("ST: ");
-    lcd.print(EEPROM.read(0));
-    lcd.print(" CT: ");
-    lcd.print(steinhart);
+    if(steinhart >= boilerTempMin){
+      Serial.println( "Ready" );
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Ready");
+      lcd.setCursor(0,1);
+      lcd.print("ST: ");
+      lcd.print(EEPROM.read(0));
+      lcd.print(" CT: ");
+      lcd.print(steinhart);
+      delay(100);
+    }
+    else{
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Heating");
+      lcd.setCursor(0,1);
+      lcd.print("ST: ");
+      lcd.print(EEPROM.read(0));
+      lcd.print(" CT: ");
+      lcd.print(steinhart);
+      delay(100);
+    }
     break;
    case 1:
       lcd.clear();
@@ -188,23 +202,18 @@ switch( menuitem )
       //lcd.print(BREWS[menuitem-1].name);
   }
   
-//temp
+
 uint8_t i;
   float average;
- 
-  // take N samples in a row, with a slight delay
-  for (i=0; i< NUMSAMPLES; i++) {
+   for (i=0; i< NUMSAMPLES; i++) {
    samples[i] = analogRead(THERMISTORPIN);
    delay(10);
   }
- 
-  // average all the samples out
   average = 0;
   for (i=0; i< NUMSAMPLES; i++) {
      average += samples[i];
   }
-  average /= NUMSAMPLES;
- 
+  average /= NUMSAMPLES; 
   Serial.print("Average analog reading "); 
   Serial.println(average);
  
@@ -363,14 +372,6 @@ void boilerPid () {
   }
 }
 
-unsigned int analogAvg(int pin)
-{//since analogRed returns 10 bits, we can fit 64 readings within an unsigned int
-unsigned int sum=0;
-for(int n=0; n<64; n++)
-  sum += analogRead(pin);
-return sum/64;
-}
-
 void cycle () {
   
   while(digitalRead(groupButton) == LOW) {
@@ -390,11 +391,11 @@ void cycle () {
 void fill(){
   if((digitalRead(lowSwitch)) == HIGH){
     digitalWrite(inletRelay, HIGH);
-    digitalWrite(groupHeadValve, HIGH);
+    //digitalWrite(groupHeadValve, HIGH);
   }
-  if((digitalRead(lowSwitch)) == LOW){
+  if((digitalRead(highSwitch)) == LOW){
     digitalWrite(inletRelay, LOW);
-    digitalWrite(groupHeadValve, LOW);
+    //digitalWrite(groupHeadValve, LOW);
   }
 }
 
@@ -404,7 +405,7 @@ if(digitalRead(groupButton) == LOW){
   lcd.clear();
   lcd.setCursor(0,0);
   int selection = analogRead(pressurePot);
-  selectedTemp = map(selection, 0, 1023, 192, 207);
+  selectedTemp = map(selection, 0, 1023, 195, 211);
   EEPROM.write(0, selectedTemp);
   boilerTempMin = (EEPROM.read(0) - 1);
   boilerTempMax = (EEPROM.read(0) + 1);
@@ -445,7 +446,8 @@ void temp(void) {
   steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15); // + (1/To)
   steinhart = 1.0 / steinhart;                 // Invert
   steinhart -= 273.15;                         // convert to C
- 
+  steinhart = steinhart * 1.8; //converting to F
+  steinhart = steinhart + 32; //converting to F
   Serial.print("Temperature "); 
   Serial.print(steinhart);
   Serial.println(" *C");
